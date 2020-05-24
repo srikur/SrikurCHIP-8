@@ -12,7 +12,7 @@ public:
 	void emulateCycle();
 
 	u16 memory[4096];
-	u16 registers[16];
+	u16 V[16];
 
 	u16 i;
 	u16 pc;
