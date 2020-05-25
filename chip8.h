@@ -11,16 +11,25 @@ public:
 	bool loadGame(char* romName);
 	void emulateCycle();
 
-	u16 memory[4096];
-	u16 V[16];
+	u8 memory[4096];
+	u8 V[16];
 
 	u16 i;
 	u16 pc;
+    bool drawFlag;
 	u8 delay_timer;
 	u8 sound_timer;
 
 	u16 stack[16];
+    u8 keys[16];
 	u16 sp;
+
+    bool setupGraphics();
+    bool setupInput();
+    void drawGraphics();
+    void setKeys();
+
+    u8 graphics[64 * 32];
 
     u8 fontset[80] = {
       0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
