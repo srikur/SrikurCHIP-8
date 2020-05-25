@@ -71,9 +71,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>C:\graphics\sdl\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\graphics\sdl\lib\x86;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>C:\graphics\sdl\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\graphics\sdl\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -91,6 +95,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -103,6 +108,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -144,6 +150,31 @@
   <ItemGroup>
     <ClInclude Include="chip8.h" />
     <ClInclude Include="includes.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="roms\15PUZZLE" />
+    <None Include="roms\BLINKY" />
+    <None Include="roms\BLITZ" />
+    <None Include="roms\BRIX" />
+    <None Include="roms\CONNECT4" />
+    <None Include="roms\GUESS" />
+    <None Include="roms\HIDDEN" />
+    <None Include="roms\INVADERS" />
+    <None Include="roms\KALEID" />
+    <None Include="roms\MAZE" />
+    <None Include="roms\MERLIN" />
+    <None Include="roms\MISSILE" />
+    <None Include="roms\PONG" />
+    <None Include="roms\PONG2" />
+    <None Include="roms\PUZZLE" />
+    <None Include="roms\SYZYGY" />
+    <None Include="roms\TANK" />
+    <None Include="roms\TETRIS" />
+    <None Include="roms\TICTAC" />
+    <None Include="roms\UFO" />
+    <None Include="roms\VBRIX" />
+    <None Include="roms\VERS" />
+    <None Include="roms\WIPEOFF" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

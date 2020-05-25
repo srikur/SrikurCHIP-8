@@ -5,15 +5,18 @@ CHIP8::CHIP8() {
 	pc = 0x200;
 	i = 0;
 	sp = 0;
+	delay_timer = 0;
+	sound_timer = 0;
 	memset(memory, 0, 4096);
 	memset(V, 0, 16);
+	memset(graphics, 0, 2048);
 
 	for (int i = 0; i < 80; i++) {
 		memory[i] = fontset[i];
 	}
 }
 
-bool CHIP8::loadGame(char* romName) {
+bool CHIP8::loadGame(const char* romName) {
 	FILE* file = fopen(romName, "r");
 
 	if (file == NULL) {
@@ -40,17 +43,6 @@ void CHIP8::emulateCycle() {
 	/* Fetch opcode */
 	u16 instruction = memory[pc] << 8 | memory[pc + 1];
 	decodeInstruction(instruction);
-}
-
-bool CHIP8::setupGraphics() {
-	return false;
-}
-
-bool CHIP8::setupInput() {
-	return false;
-}
-
-void CHIP8::drawGraphics() {
 }
 
 void CHIP8::setKeys() {
@@ -338,5 +330,16 @@ void CHIP8::decodeInstruction(u16 instruction) {
 	default:
 		cout << "Unknown Opcode!" << endl;
 		break;
+	}
+
+	if (delay_timer > 0) {
+		delay_timer--;
+	}
+
+	if (sound_timer > 0) {
+		if (sound_timer == 1) {
+			/* SOUND */
+		}
+		sound_timer--;
 	}
 }

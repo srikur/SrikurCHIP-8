@@ -8,7 +8,7 @@ public:
 
 	CHIP8();
 
-	bool loadGame(char* romName);
+	bool loadGame(const char* romName);
 	void emulateCycle();
 
 	u8 memory[4096];
@@ -16,7 +16,7 @@ public:
 
 	u16 i;
 	u16 pc;
-    bool drawFlag;
+    bool drawFlag = false;
 	u8 delay_timer;
 	u8 sound_timer;
 
@@ -24,9 +24,6 @@ public:
     u8 keys[16];
 	u16 sp;
 
-    bool setupGraphics();
-    bool setupInput();
-    void drawGraphics();
     void setKeys();
 
     u8 graphics[64 * 32];

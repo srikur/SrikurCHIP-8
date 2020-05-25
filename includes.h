@@ -1,9 +1,12 @@
 #pragma once
 #define _CRT_SECURE_NO_WARNINGS
 
+#include <SDL.h>
+
 #include <iostream>
 #include <algorithm>
 #include <memory>
+#include <thread>
 #include <ctime>
 
 typedef uint8_t u8;
