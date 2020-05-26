@@ -84,9 +84,7 @@ void CHIP8::decodeInstruction(u16 instruction) {
 		switch (instruction & 0xF) {
 		case 0x0:
 			/* 00E0: Clear the screen */
-			for (int i = 0; i < 64 * 32; i++) {
-				graphics[i] = 0;
-			}
+			memset(graphics, 0xFF000000, screen_height * screen_width);
 			drawFlag = true;
 			pc += 2;
 			break;
@@ -102,7 +100,7 @@ void CHIP8::decodeInstruction(u16 instruction) {
 		/* 2NNN: Calls subroutine at NNN */
 		stack[sp] = pc;
 		++sp;
-		pc = instruction & 0xFFF;
+		pc = (instruction & 0xFFF);
 		break;
 	case 0x3000:
 		/* 3XNN: Skips the next instruction if VX equals NN */
@@ -131,7 +129,7 @@ void CHIP8::decodeInstruction(u16 instruction) {
 		break;
 	case 0x6000:
 		/* 6XNN: Sets VX to NN */
-		V[(instruction & 0xF00) >> 8] = instruction & 0xFF;
+		V[(instruction & 0xF00) >> 8] = (instruction & 0xFF);
 		pc += 2;
 		break;
 	case 0x7000:
@@ -164,13 +162,13 @@ void CHIP8::decodeInstruction(u16 instruction) {
 		case 0x004:
 			/* 8XY4: Add VY to VX. VF is set to 1 when there is a
 				carry, and zero when there is not. */
-			if (V[(instruction & 0x00F0) >> 4] > (0xFF - V[(instruction & 0x0F00) >> 8])) {
+			if (V[(instruction & 0xF0) >> 4] > (0xFF - V[(instruction & 0xF00) >> 8])) {
 				V[0xF] = 1;
 			}
 			else {
 				V[0xF] = 0;
 			}
-			V[(instruction & 0x0F00) >> 8] += V[(instruction & 0x00F0) >> 4];
+			V[(instruction & 0xF00) >> 8] += V[(instruction & 0xF0) >> 4];
 			pc += 2;
 			break;
 		case 0x005:
@@ -186,8 +184,13 @@ void CHIP8::decodeInstruction(u16 instruction) {
 			break;
 		case 0x006:
 			/* 8XY6: Store the value of register VY shifted right one bit in register VX. Set register VF to the least signficant bit prior to the shift. */
-			V[0xF] = !!((V[(instruction & 0xF00) >> 8]) & 0x01);
-			V[(instruction & 0xF00) >> 8] >>= 1;
+			V[0xF] = (V[(instruction & 0xF00) >> 8]) & 0x01;
+			if (shift_quirk) {
+				V[(instruction & 0xF00) >> 8] >>= 1;
+			}
+			else {
+				V[(instruction & 0xF00) >> 8] = V[(instruction & 0xF0) >> 4] >> 1;
+			}
 			pc += 2;
 		case 0x007:
 			/* 8XY7: Set register VX to the value of VY minus VX. Set VF to 0 if a borrow occurs. Set VF to 1 if a borrow does not occur. */
@@ -203,7 +206,12 @@ void CHIP8::decodeInstruction(u16 instruction) {
 		case 0x00E:
 			/* 8XYE: Store the value of register VY shifted left one bit in register VX. Set register VF to the most significant bit prior to the shift. */
 			V[0xF] = !!((V[(instruction & 0xF00) >> 8]) & 0x80);
-			V[(instruction & 0xF00) >> 8] <<= 1;
+			if (shift_quirk) {
+				V[(instruction & 0xF00) >> 8] <<= 1;
+			}
+			else {
+				V[(instruction & 0xF00) >> 8] = V[(instruction & 0xF0) >> 4] << 1;
+			}
 			pc += 2;
 			break;
 		}
@@ -229,22 +237,18 @@ void CHIP8::decodeInstruction(u16 instruction) {
 		break;
 	case 0xD000: {
 		/* DXYN: Draw a sprite at position VX, VY with N bytes of sprite data starting at the address stored in I. Set VF to 1 if any pixels are changed to unset, and 0 otherwise. */
-		u16 x = V[(instruction & 0xF00) >> 8];
-		u16 y = V[(instruction & 0xF0) >> 4];
-		u16 height = instruction & 0xF;
-		u16 pixel;
 
 		V[0xF] = 0;
-		for (int yline = 0; yline < height; yline++)
-		{
-			pixel = memory[i + yline];
-			for (int xline = 0; xline < 8; xline++)
-			{
-				if ((pixel & (0x80 >> xline)) != 0)
-				{
-					if (graphics[(x + xline + ((y + yline) * 64))] == 1)
+		for (int y = 0; y < (instruction & 0xF); y++) {
+			for (int x = 0; x < 8; x++) {
+				u8 pixel = memory[i + y];
+				if (pixel & (0x80 >> x)) {
+					int index = (V[(instruction & 0xF00) >> 8] + x) % screen_width +
+						((V[(instruction & 0xF0) >> 4] + y) % screen_height) * screen_width;
+					if (graphics[index] == 1) {
 						V[0xF] = 1;
-					graphics[x + xline + ((y + yline) * 64)] ^= 1;
+					}
+					graphics[index] ^= 1;
 				}
 			}
 		}
@@ -328,9 +332,9 @@ void CHIP8::decodeInstruction(u16 instruction) {
 			break;
 		case 0x33:
 			/* FX33: Store the binary-coded decimnal equivalent of the value stored in register VX at addresses I, I + 1, and I + 2 */
-			memory[i] = V[(instruction & 0x0F00) >> 8] / 100;
-			memory[i + 1] = (V[(instruction & 0x0F00) >> 8] / 10) % 10;
-			memory[i + 2] = (V[(instruction & 0x0F00) >> 8] % 100) % 10;
+			memory[i] = (V[(instruction & 0x0F00) >> 8] % 1000) / 100;
+			memory[i + 1] = (V[(instruction & 0x0F00) >> 8] % 100) / 10;
+			memory[i + 2] = (V[(instruction & 0x0F00) >> 8] % 10);
 			pc += 2;
 			break;
 		case 0x55:

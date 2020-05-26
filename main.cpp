@@ -3,9 +3,6 @@
 
 using namespace std;
 
-constexpr int screen_width = 64;
-constexpr int screen_height = 32;
-
 u16 opcode;
 u8 keys[16];
 
@@ -32,7 +29,7 @@ CHIP8* cpu;
 
 int main(int argc, char** argv) {
 
-	u32* pixels;
+	u32 pixels[screen_width * screen_height];
 
 	SDL_Window* window = NULL;
 	SDL_Event event;
@@ -52,11 +49,14 @@ int main(int argc, char** argv) {
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
 	SDL_RenderSetLogicalSize(renderer, screen_width, screen_height);
 	SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, screen_width, screen_height);
-	pixels = (u32*)malloc(screen_height * screen_width * sizeof(u32));
 
 	cpu = new CHIP8();
 
-	bool loadResult = cpu->loadGame("roms/PONG");
+	const char* romName = "roms/TANK";
+	bool loadResult = cpu->loadGame(romName);
+	if (!strcmp(romName, "roms/INVADERS")) {
+		cpu->shift_quirk = 1;
+	}
 	if (!loadResult) {
 		printf("Unable to start the emulation!\n");
 		return 0;
@@ -65,6 +65,21 @@ int main(int argc, char** argv) {
 	while (!quit) {
 
 		cpu->emulateCycle();
+
+		if (cpu->drawFlag) {
+			/* Redraw */
+			cpu->drawFlag = false;
+
+			for (int i = 0; i < screen_width * screen_height; ++i) {
+				pixels[i] = (cpu->graphics[i] ? 0xFFFFFFFF : 0xFF000000);
+				//pixels[i] = ((0x00FFFFFF * cpu->graphics[i]) | 0xFF000000);
+			}
+
+			SDL_UpdateTexture(texture, NULL, pixels, screen_width * sizeof(u32));
+			SDL_RenderClear(renderer);
+			SDL_RenderCopy(renderer, texture, NULL, NULL);
+			SDL_RenderPresent(renderer);
+		}
 
 		while (SDL_PollEvent(&event)) {
 
@@ -91,21 +106,6 @@ int main(int argc, char** argv) {
 				break;
 			}
 		}
-		if (cpu->drawFlag) {
-			/* Redraw */
-			cpu->drawFlag = false;
-
-			for (int i = 0; i < screen_width * screen_height; ++i) {
-				pixels[i] = ((0x00FFFFFF * cpu->graphics[i]) | 0xFF000000);
-			}
-
-			SDL_UpdateTexture(texture, NULL, pixels, screen_width * sizeof(u32));
-			SDL_RenderClear(renderer);
-			SDL_RenderCopy(renderer, texture, NULL, NULL);
-			SDL_RenderPresent(renderer);
-		}
-
-		this_thread::sleep_for(chrono::microseconds(1200));
 	}
 
 	SDL_DestroyTexture(texture);
@@ -113,7 +113,6 @@ int main(int argc, char** argv) {
 	SDL_DestroyWindow(window);
 	SDL_Quit();
 
-	free(pixels);
 	delete cpu;
 
 	return 0;

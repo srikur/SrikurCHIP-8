@@ -100,5 +100,11 @@
     <None Include="roms\WIPEOFF">
       <Filter>roms</Filter>
     </None>
+    <None Include="roms\test_opcode.ch8">
+      <Filter>roms</Filter>
+    </None>
+    <None Include="roms\BC_test.ch8">
+      <Filter>roms</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -1,6 +1,9 @@
 #pragma once
 #include "includes.h"
 
+constexpr int screen_width = 64;
+constexpr int screen_height = 32;
+
 using namespace std;
 
 class CHIP8 {
@@ -23,6 +26,8 @@ public:
 	u16 stack[16];
     u8 keys[16];
 	u16 sp;
+
+    int shift_quirk;
 
     u8 graphics[64 * 32];
 
