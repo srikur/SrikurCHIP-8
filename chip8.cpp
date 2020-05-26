@@ -18,7 +18,7 @@ CHIP8::CHIP8() {
 }
 
 bool CHIP8::loadGame(const char* romName) {
-	FILE* file = fopen(romName, "r");
+	FILE* file = fopen(romName, "rb");
 
 	if (file == NULL) {
 		cout << "Failed to open the file" << endl;
@@ -39,6 +39,7 @@ bool CHIP8::loadGame(const char* romName) {
 	long result = fread(buffer, 1, length, file);
 	if (result != length) {
 		printf("Error reading the file!\n");
+		printf("Bytes read: %d\n", result);
 		return false;
 	}
 
@@ -80,15 +81,8 @@ void CHIP8::decodeInstruction(u16 instruction) {
 		break;
 	case 0x0000:
 		/* 0NNN, 00E0, and 00EE */
-		switch (instruction & 0xFF) {
-		case 0x00:
-			for (int i = 0; i < 64 * 32; i++) {
-				graphics[i] = 0;
-			}
-			drawFlag = true;
-			pc += 2;
-			break;
-		case 0xE0:
+		switch (instruction & 0xF) {
+		case 0x0:
 			/* 00E0: Clear the screen */
 			for (int i = 0; i < 64 * 32; i++) {
 				graphics[i] = 0;
@@ -96,7 +90,7 @@ void CHIP8::decodeInstruction(u16 instruction) {
 			drawFlag = true;
 			pc += 2;
 			break;
-		case 0xEE:
+		case 0xE:
 			/* 00EE: Returns from a subroutine */
 			--sp;
 			pc = stack[sp];
@@ -170,13 +164,13 @@ void CHIP8::decodeInstruction(u16 instruction) {
 		case 0x004:
 			/* 8XY4: Add VY to VX. VF is set to 1 when there is a
 				carry, and zero when there is not. */
-			V[(instruction & 0x0F00) >> 8] += V[(instruction & 0x00F0) >> 4];
 			if (V[(instruction & 0x00F0) >> 4] > (0xFF - V[(instruction & 0x0F00) >> 8])) {
 				V[0xF] = 1;
 			}
 			else {
 				V[0xF] = 0;
 			}
+			V[(instruction & 0x0F00) >> 8] += V[(instruction & 0x00F0) >> 4];
 			pc += 2;
 			break;
 		case 0x005:
@@ -193,7 +187,7 @@ void CHIP8::decodeInstruction(u16 instruction) {
 		case 0x006:
 			/* 8XY6: Store the value of register VY shifted right one bit in register VX. Set register VF to the least signficant bit prior to the shift. */
 			V[0xF] = !!((V[(instruction & 0xF00) >> 8]) & 0x01);
-			V[(instruction & 0xF00) >> 8] = V[(instruction & 0xF0) >> 4] >> 1;
+			V[(instruction & 0xF00) >> 8] >>= 1;
 			pc += 2;
 		case 0x007:
 			/* 8XY7: Set register VX to the value of VY minus VX. Set VF to 0 if a borrow occurs. Set VF to 1 if a borrow does not occur. */
@@ -209,7 +203,7 @@ void CHIP8::decodeInstruction(u16 instruction) {
 		case 0x00E:
 			/* 8XYE: Store the value of register VY shifted left one bit in register VX. Set register VF to the most significant bit prior to the shift. */
 			V[0xF] = !!((V[(instruction & 0xF00) >> 8]) & 0x80);
-			V[(instruction & 0xF00) >> 8] = V[(instruction & 0xF0) >> 4] << 1;
+			V[(instruction & 0xF00) >> 8] <<= 1;
 			pc += 2;
 			break;
 		}
@@ -318,6 +312,12 @@ void CHIP8::decodeInstruction(u16 instruction) {
 			break;
 		case 0x1E:
 			/* FX1E: Add the value stored in register VX to register I */
+			if (i + V[(instruction & 0xF00) >> 8] > 0xFFF) {
+				V[0xF] = 1;
+			}
+			else {
+				V[0xF] = 0;
+			}
 			i += V[(instruction & 0xF00) >> 8];
 			pc += 2;
 			break;
@@ -335,7 +335,7 @@ void CHIP8::decodeInstruction(u16 instruction) {
 			break;
 		case 0x55:
 			/* FX55: Store the values of registers V0 through VX inclusive in memory starting at address I. I is set to I + X + 1 after the operation */
-			for (int j = 0; j <= ((instruction & 0xF00) >> 8); j++) {
+			for (int j = 0; j <= ((instruction & 0xF00) >> 8); ++j) {
 				memory[i + j] = V[j];
 			}
 			i += ((instruction & 0xF00) >> 8) + 1;
@@ -343,7 +343,7 @@ void CHIP8::decodeInstruction(u16 instruction) {
 			break;
 		case 0x65:
 			/* FX65: Fill registers V0 through VX inclusive with the values stored in memory starting at address I. I is set to I + X + 1 after the operation */
-			for (int j = 0; j <= ((instruction & 0xF00) >> 8); j++) {
+			for (int j = 0; j <= ((instruction & 0xF00) >> 8); ++j) {
 				V[j] = memory[i + j];
 			}
 			i += ((instruction & 0xF00) >> 8) + 1;

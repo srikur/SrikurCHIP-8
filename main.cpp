@@ -50,13 +50,13 @@ int main(int argc, char** argv) {
 	}
 
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
-	SDL_RenderSetLogicalSize(renderer, 640, 480);
-	SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, screen_width, screen_height);
+	SDL_RenderSetLogicalSize(renderer, screen_width, screen_height);
+	SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, screen_width, screen_height);
 	pixels = (u32*)malloc(screen_height * screen_width * sizeof(u32));
 
 	cpu = new CHIP8();
 
-	bool loadResult = cpu->loadGame("roms/INVADERS");
+	bool loadResult = cpu->loadGame("roms/PONG");
 	if (!loadResult) {
 		printf("Unable to start the emulation!\n");
 		return 0;
@@ -75,7 +75,6 @@ int main(int argc, char** argv) {
 			case SDL_KEYDOWN:
 				if (event.key.keysym.sym == SDLK_ESCAPE) {
 					quit = true;
-					return 0;
 				}
 				for (int i = 0; i < 16; i++) {
 					if (event.key.keysym.sym == keycodes[i]) {
@@ -96,10 +95,8 @@ int main(int argc, char** argv) {
 			/* Redraw */
 			cpu->drawFlag = false;
 
-			for (int i = 0; i < screen_width * screen_height; i++) {
-				if (pixels) {
-					pixels[i] = ((0x00FFFFFF * cpu->graphics[i]) | 0xFF000000);
-				}
+			for (int i = 0; i < screen_width * screen_height; ++i) {
+				pixels[i] = ((0x00FFFFFF * cpu->graphics[i]) | 0xFF000000);
 			}
 
 			SDL_UpdateTexture(texture, NULL, pixels, screen_width * sizeof(u32));
@@ -108,7 +105,7 @@ int main(int argc, char** argv) {
 			SDL_RenderPresent(renderer);
 		}
 
-		//this_thread::sleep_for(chrono::microseconds(1200));
+		this_thread::sleep_for(chrono::microseconds(1200));
 	}
 
 	SDL_DestroyTexture(texture);
