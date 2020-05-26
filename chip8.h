@@ -16,15 +16,13 @@ public:
 
 	u16 i;
 	u16 pc;
-    bool drawFlag = false;
+    bool drawFlag = true;
 	u8 delay_timer;
 	u8 sound_timer;
 
 	u16 stack[16];
     u8 keys[16];
 	u16 sp;
-
-    void setKeys();
 
     u8 graphics[64 * 32];
 

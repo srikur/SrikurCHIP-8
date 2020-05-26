@@ -10,6 +10,7 @@ CHIP8::CHIP8() {
 	memset(memory, 0, 4096);
 	memset(V, 0, 16);
 	memset(graphics, 0, 2048);
+	memset(keys, 0, 16);
 
 	for (int i = 0; i < 80; i++) {
 		memory[i] = fontset[i];
@@ -26,15 +27,33 @@ bool CHIP8::loadGame(const char* romName) {
 
 	fseek(file, 0, SEEK_END);
 	long length = ftell(file);
+	printf("File length: %i\n", length);
+	fseek(file, 0, SEEK_SET);
 	char* buffer = (char*)malloc(length * sizeof(char));
 
-	fseek(file, 0, SEEK_SET);
-	fread(buffer, 1, 4096, file);
-	fclose(file);
-
-	for (int i = 0; i < length; i++) {
-		memory[i + 0x200] = buffer[i];
+	if (buffer == NULL) {
+		printf("Failed to open the file!\n");
+		return false;
 	}
+
+	long result = fread(buffer, 1, length, file);
+	if (result != length) {
+		printf("Error reading the file!\n");
+		return false;
+	}
+
+	if (length < (4096 - 512)) {
+		for (int i = 0; i < length; i++) {
+			memory[i + 0x200] = buffer[i];
+		}
+	}
+	else {
+		printf("ROM size too large for memory!\n");
+		return false;
+	}
+
+	fclose(file);
+	free(buffer);
 
 	return true;
 }
@@ -45,11 +64,9 @@ void CHIP8::emulateCycle() {
 	decodeInstruction(instruction);
 }
 
-void CHIP8::setKeys() {
-}
-
 void CHIP8::decodeInstruction(u16 instruction) {
-	int random, genInt;
+
+	printf("Currently decoding instruction: 0x%X\n", instruction);
 
 	switch (instruction & 0xF000) { /* Gets first four bits */
 	case 0xA000:
@@ -64,24 +81,33 @@ void CHIP8::decodeInstruction(u16 instruction) {
 	case 0x0000:
 		/* 0NNN, 00E0, and 00EE */
 		switch (instruction & 0xFF) {
+		case 0x00:
+			for (int i = 0; i < 64 * 32; i++) {
+				graphics[i] = 0;
+			}
+			drawFlag = true;
+			pc += 2;
+			break;
 		case 0xE0:
 			/* 00E0: Clear the screen */
 			for (int i = 0; i < 64 * 32; i++) {
 				graphics[i] = 0;
 			}
+			drawFlag = true;
 			pc += 2;
 			break;
 		case 0xEE:
 			/* 00EE: Returns from a subroutine */
-			sp--;
+			--sp;
 			pc = stack[sp];
+			pc += 2;
 			break;
 		}
 		break;
 	case 0x2000:
 		/* 2NNN: Calls subroutine at NNN */
 		stack[sp] = pc;
-		sp++;
+		++sp;
 		pc = instruction & 0xFFF;
 		break;
 	case 0x3000:
@@ -144,8 +170,8 @@ void CHIP8::decodeInstruction(u16 instruction) {
 		case 0x004:
 			/* 8XY4: Add VY to VX. VF is set to 1 when there is a
 				carry, and zero when there is not. */
-			genInt = V[(instruction & 0xF00) >> 8] + V[(0xF0) >> 4];
-			if (genInt > 255) {
+			V[(instruction & 0x0F00) >> 8] += V[(instruction & 0x00F0) >> 4];
+			if (V[(instruction & 0x00F0) >> 4] > (0xFF - V[(instruction & 0x0F00) >> 8])) {
 				V[0xF] = 1;
 			}
 			else {
@@ -155,14 +181,13 @@ void CHIP8::decodeInstruction(u16 instruction) {
 			break;
 		case 0x005:
 			/* 8XY5: VY is subtracted from VX. Set VF to 0 if a borrow occurs. Set VF to 1 if a borrow does not occur. */
-			genInt = V[(instruction & 0xF00) >> 8] - V[(0xF0) >> 4];
-			if (genInt < 0) {
+			if (V[(instruction & 0xF0) >> 4] > V[(instruction & 0xF00) >> 8]) {
 				V[0xF] = 0;
 			}
 			else {
 				V[0xF] = 1;
 			}
-			V[(instruction & 0xF00) >> 8] = genInt;
+			V[(instruction & 0xF00) >> 8] -= V[(instruction & 0xF0) >> 4];
 			pc += 2;
 			break;
 		case 0x006:
@@ -172,14 +197,13 @@ void CHIP8::decodeInstruction(u16 instruction) {
 			pc += 2;
 		case 0x007:
 			/* 8XY7: Set register VX to the value of VY minus VX. Set VF to 0 if a borrow occurs. Set VF to 1 if a borrow does not occur. */
-			genInt = V[(instruction & 0xF0) >> 4] - V[(instruction & 0xF00) >> 8];
-			if (genInt < 0) {
+			if (V[(instruction & 0x0F00) >> 8] > V[(instruction & 0x00F0) >> 4]) {
 				V[0xF] = 0;
 			}
 			else {
 				V[0xF] = 1;
 			}
-			V[(instruction & 0xF00) >> 8] = genInt;
+			V[(instruction & 0xF00) >> 8] = V[(instruction & 0x00F0) >> 4] - V[(instruction & 0x0F00) >> 8];
 			pc += 2;
 			break;
 		case 0x00E:
@@ -206,15 +230,14 @@ void CHIP8::decodeInstruction(u16 instruction) {
 	case 0xC000:
 		/* CXNN: Sets VX to the result of a bitwise AND operation on a random number (0-255) and NN */
 		srand((unsigned)time(0));
-		random = 1 + (rand() % 255);
-		V[(instruction & 0xF00) >> 8] = random & 0xFF;
+		V[(instruction & 0x0F00) >> 8] = (rand() % (0xFF + 1)) & (instruction & 0x00FF);
 		pc += 2;
 		break;
 	case 0xD000: {
 		/* DXYN: Draw a sprite at position VX, VY with N bytes of sprite data starting at the address stored in I. Set VF to 1 if any pixels are changed to unset, and 0 otherwise. */
-		u16 x = V[(instruction & 0x0F00) >> 8];
-		u16 y = V[(instruction & 0x00F0) >> 4];
-		u16 height = instruction & 0x000F;
+		u16 x = V[(instruction & 0xF00) >> 8];
+		u16 y = V[(instruction & 0xF0) >> 4];
+		u16 height = instruction & 0xF;
 		u16 pixel;
 
 		V[0xF] = 0;
@@ -240,7 +263,7 @@ void CHIP8::decodeInstruction(u16 instruction) {
 		switch (instruction & 0xFF) {
 		case 0x9E:
 			/* EX9E: Skip the following instruction if the key corresponding to the hex value currently stored in register VX is pressed */
-			if (keys[V[(instruction & 0xF00) >> 8]]) {
+			if (keys[V[(instruction & 0xF00) >> 8]] != 0) {
 				pc += 4;
 			}
 			else {
@@ -249,7 +272,7 @@ void CHIP8::decodeInstruction(u16 instruction) {
 			break;
 		case 0xA1:
 			/* EXA1: Skip the following instruction if the key corresponding to the hex value currently stored in register VX is not pressed*/
-			if (!keys[V[(instruction & 0xF00) >> 8]]) {
+			if (keys[V[(instruction & 0xF00) >> 8]] == 0) {
 				pc += 4;
 			}
 			else {
@@ -269,7 +292,7 @@ void CHIP8::decodeInstruction(u16 instruction) {
 			/* FX0A: Wait for a keypress and store the result in register VX */
 			bool keyPressed = false;
 			for (int i = 0; i < 16; i++) {
-				if (keys[i]) {
+				if (keys[i] != 0) {
 					V[(instruction & 0xF00) >> 8] = i;
 					keyPressed = true;
 				}
@@ -282,6 +305,7 @@ void CHIP8::decodeInstruction(u16 instruction) {
 			pc += 2;
 		}
 				 break;
+
 		case 0x15:
 			/* FX15: Set the delay timer to the value of register VX */
 			delay_timer = V[(instruction & 0xF00) >> 8];

@@ -8,11 +8,31 @@ constexpr int screen_height = 32;
 
 u16 opcode;
 u8 keys[16];
-u32* pixels;
+
+u8 keycodes[16] = {
+	SDLK_x,
+	SDLK_1,
+	SDLK_2,
+	SDLK_3,
+	SDLK_q,
+	SDLK_w,
+	SDLK_e,
+	SDLK_a,
+	SDLK_s,
+	SDLK_d,
+	SDLK_z,
+	SDLK_c,
+	SDLK_4,
+	SDLK_r,
+	SDLK_f,
+	SDLK_v,
+};
 
 CHIP8* cpu;
 
 int main(int argc, char** argv) {
+
+	u32* pixels;
 
 	SDL_Window* window = NULL;
 	SDL_Event event;
@@ -22,39 +42,64 @@ int main(int argc, char** argv) {
 		printf("Failed to initialize SDL! Error: %s\n", SDL_GetError());
 	}
 	else {
-		window = SDL_CreateWindow("Srikur's CHIP-8 Emulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screen_width, screen_height, SDL_WINDOW_SHOWN);
+		window = SDL_CreateWindow("Srikur's CHIP-8 Emulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screen_width * 10, screen_height * 15, SDL_WINDOW_SHOWN);
+		SDL_SetWindowResizable(window, SDL_TRUE);
 		if (window == NULL) {
 			printf("Failed to create the SDL window! Error: %s\n", SDL_GetError());
 		}
 	}
 
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
-	SDL_RenderSetLogicalSize(renderer, screen_width, screen_height);
+	SDL_RenderSetLogicalSize(renderer, 640, 480);
 	SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, screen_width, screen_height);
 	pixels = (u32*)malloc(screen_height * screen_width * sizeof(u32));
 
 	cpu = new CHIP8();
-	cpu->loadGame("ROMNAME");
+
+	bool loadResult = cpu->loadGame("roms/INVADERS");
+	if (!loadResult) {
+		printf("Unable to start the emulation!\n");
+		return 0;
+	}
 
 	while (!quit) {
-		SDL_UpdateTexture(texture, NULL, pixels, screen_width * sizeof(u32));
-		SDL_WaitEvent(&event);
 
 		cpu->emulateCycle();
 
-		switch (event.type) {
-		case SDL_QUIT:
-			quit = true;
-			break;
-		case SDL_KEYDOWN:
-			break;
-		}
+		while (SDL_PollEvent(&event)) {
 
+			switch (event.type) {
+			case SDL_QUIT:
+				quit = true;
+				break;
+			case SDL_KEYDOWN:
+				if (event.key.keysym.sym == SDLK_ESCAPE) {
+					quit = true;
+					return 0;
+				}
+				for (int i = 0; i < 16; i++) {
+					if (event.key.keysym.sym == keycodes[i]) {
+						cpu->keys[i] = 1;
+					}
+				}
+				break;
+			case SDL_KEYUP:
+				for (int i = 0; i < 16; i++) {
+					if (event.key.keysym.sym == keycodes[i]) {
+						cpu->keys[i] = 0;
+					}
+				}
+				break;
+			}
+		}
 		if (cpu->drawFlag) {
 			/* Redraw */
+			cpu->drawFlag = false;
 
-			for (int i = 0; i < 64 * 32; i++) {
-				pixels[i] = (0x00FFFFFF * cpu->graphics[i]) | 0xFF000000;
+			for (int i = 0; i < screen_width * screen_height; i++) {
+				if (pixels) {
+					pixels[i] = ((0x00FFFFFF * cpu->graphics[i]) | 0xFF000000);
+				}
 			}
 
 			SDL_UpdateTexture(texture, NULL, pixels, screen_width * sizeof(u32));
@@ -63,9 +108,7 @@ int main(int argc, char** argv) {
 			SDL_RenderPresent(renderer);
 		}
 
-		cpu->setKeys();
-
-		this_thread::sleep_for(chrono::microseconds(1500));
+		//this_thread::sleep_for(chrono::microseconds(1200));
 	}
 
 	SDL_DestroyTexture(texture);
