@@ -27,7 +27,18 @@ u8 keycodes[16] = {
 
 CHIP8* cpu;
 
+void my_int_func(int x)
+{
+	printf("%d\n", x);
+}
+
 int main(int argc, char** argv) {
+
+	void (*foo)(int);
+	foo = &my_int_func;
+
+	foo(2);
+	(*foo)(2);
 
 	u32 pixels[screen_width * screen_height];
 
