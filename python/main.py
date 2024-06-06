@@ -1,6 +1,7 @@
 import sys
 import cpu
 import sdl2.ext
+import time
 
 class Emulator:
     romPath = ""
@@ -27,8 +28,13 @@ class Emulator:
         # Load the ROM
         self.chip8.load_rom(self.romPath)
 
+        target_fps = 120
+        frame_duration = 1.0 / target_fps
+
         # Main loop
         while not self.quit:
+            start_time = time.time()
+
             # Emulate one cycle
             self.chip8.emulateCycle()
 
@@ -39,7 +45,7 @@ class Emulator:
                 pixels = self.chip8.getScreen()
                 screen_buffer = bytes(64 * 32 * 4)
                 for i in range(64 * 32):
-                    color = (255, 255, 255, 255) if pixels[i] != 0 else (0, 0, 0, 255)
+                    color = (255, 161, 100, 3) if pixels[i] != 0 else (0, 245, 187, 93)
                     offset = i * 4
                     screen_buffer = screen_buffer[:offset] + bytes(color) + screen_buffer[offset + 4:]
                 sdl2.SDL_UpdateTexture(texture, None, screen_buffer, 64 * 4)
@@ -57,6 +63,26 @@ class Emulator:
                     self.quit = True
                     break
 
+                # Check if the event is a key press
+                if event.type == sdl2.SDL_KEYDOWN:
+                    key = event.key.keysym.sym
+                    if key in self.chip8.key_map:
+                        self.chip8.keys[self.chip8.key_map[key]] = 1
+
+                # Check if the event is a key release
+                if event.type == sdl2.SDL_KEYUP:
+                    key = event.key.keysym.sym
+                    if key in self.chip8.key_map:
+                        self.chip8.keys[self.chip8.key_map[key]] = 0
+
+            # Sleep to maintain the target FPS
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            if elapsed_time < frame_duration:
+                time.sleep(frame_duration - elapsed_time)
+
+        # Clean up
+        sdl2.SDL_DestroyRenderer(renderer.sdlrenderer)
         sdl2.SDL_DestroyTexture(texture)
         sdl2.ext.quit()
 
@@ -64,5 +90,6 @@ class Emulator:
 # emu = Emulator("../roms/tests/2-ibm-logo.ch8")
 # emu = Emulator("../roms/tests/3-corax+.ch8")
 # emu = Emulator("../roms/tests/4-flags.ch8")
+# emu = Emulator("../roms/tests/chip8-test-rom.ch8")
 emu = Emulator("../roms/INVADERS")
 emu.run()
