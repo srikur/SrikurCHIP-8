@@ -62,10 +62,11 @@ bool CHIP8::loadGame(const char* romName) {
 void CHIP8::emulateCycle() {
 	/* Fetch opcode */
 	instruction = memory[pc] << 8 | memory[pc + 1];
-	printf("Currently calling instruction: %.4X\n", instruction);
-	printf("%X\n", (instruction & 0xF000) >> 12);
 
+	/* Find the right spot in the table */
 	void(CHIP8:: * opcode_fn)() = Chip8Table[(instruction & 0xF000) >> 12];
+	
+	/* Execute the relevant function */
 	(this->*opcode_fn)();
 
 	if (delay_timer > 0) {
