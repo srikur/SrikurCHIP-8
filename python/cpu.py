@@ -33,10 +33,11 @@ class CPU:
     draw_flag = True
     shift_quirk = False
 
+    ipf: int = 0
     screen_width = 64
     screen_height = 32
 
-    def __init__(self):
+    def __init__(self, ips: int = 540):
         # Load fontset into memory
         fontset = [
             0xF0, 0x90, 0x90, 0x90, 0xF0, # 0
@@ -59,6 +60,8 @@ class CPU:
         for i in range(len(fontset)):
             self.memory[i] = fontset[i]
 
+        self.ipf = ips // 60
+
     def load_rom(self, path: str):
         with open(path, "rb") as file:
             data = file.read()
@@ -66,18 +69,19 @@ class CPU:
                 self.memory[i + 0x200] = data[i]
 
     def emulateCycle(self):
-        instruction = self.memory[self.program_counter] << 8 | self.memory[self.program_counter + 1]
-        # print("Opcode: " + hex(instruction))
-        self.program_counter += 2
-        self.executeInstruction(instruction)
+        
+        for _ in range(self.ipf):
+            # Fetch the instruction
+            instruction = (self.memory[self.program_counter] << 8) | self.memory[self.program_counter + 1]
+            self.program_counter += 2
+            self.executeInstruction(instruction)
 
-        if self.delay_timer > 0:
-            self.delay_timer -= 1
-
-        if self.sound_timer > 0:
-            if self.sound_timer == 1:
-                print("BEEP!")
-            self.sound_timer -= 1
+            # Update timers
+            if self.delay_timer > 0:
+                self.delay_timer -= 1
+            if self.sound_timer > 0:
+                self.sound_timer -= 1
+                print("BEEP")
 
     def setKeys(self, keys: list):
         self.keys = keys
