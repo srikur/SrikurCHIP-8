@@ -1,5 +1,5 @@
 #include "includes.h"
-#include "chip8.h"
+#include "cpu.h"
 
 using namespace std;
 
@@ -27,18 +27,12 @@ u8 keycodes[16] = {
 
 CHIP8* cpu;
 
-void my_int_func(int x)
-{
-	printf("%d\n", x);
-}
-
 int main(int argc, char** argv) {
 
-	void (*foo)(int);
-	foo = &my_int_func;
-
-	foo(2);
-	(*foo)(2);
+	if (argc != 2) {
+		printf("Usage: %s <ROM>\n", argv[0]);
+		return 1;
+	}
 
 	u32 pixels[screen_width * screen_height];
 
@@ -63,13 +57,16 @@ int main(int argc, char** argv) {
 
 	cpu = new CHIP8();
 
-	const char* romName = "roms/TANK";
+	const char* romName = argv[1];
 	bool loadResult = cpu->loadGame(romName);
-	if (!strcmp(romName, "roms/INVADERS")) {
+	if (!strcmp(romName, "../roms/INVADERS")) {
 		cpu->shift_quirk = 1;
 	}
 	if (!loadResult) {
 		printf("Unable to start the emulation!\n");
+		SDL_DestroyTexture(texture);
+		SDL_DestroyRenderer(renderer);
+		SDL_DestroyWindow(window);
 		return 0;
 	}
 

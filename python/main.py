@@ -84,11 +84,14 @@ class Emulator:
         sdl2.SDL_DestroyTexture(texture)
         sdl2.ext.quit()
 
+rom_path = sys.argv[1]
+
 # emu = Emulator("../roms/tests/1-chip8-logo.ch8")
 # emu = Emulator("../roms/tests/2-ibm-logo.ch8")
 # emu = Emulator("../roms/tests/3-corax+.ch8")
 # emu = Emulator("../roms/tests/4-flags.ch8")
 # emu = Emulator("../roms/tests/chip8-test-rom.ch8")
-emu = Emulator("../roms/PONG")
-emu.chip8.setShiftQuirk(True)
+emu = Emulator(rom_path)
+if "INVADERS" in rom_path:
+    emu.chip8.shift_quirks = True
 emu.run()

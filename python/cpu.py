@@ -2,15 +2,15 @@ import random
 import sdl2
 
 class CPU:
-    memory = [0] * 0xFFFF
+    memory: list[int] = [0] * 0xFFFF
     registers: list[int] = [0] * 16
     stack: list[int] = [0] * 16
-    stack_pointer = 0
-    program_counter = 0x200
-    delay_timer = 0
-    index_register = 0
-    sound_timer = 0
-    keys = [0] * 16
+    stack_pointer: int = 0
+    program_counter: int = 0x200
+    delay_timer: int = 0
+    index_register: int = 0
+    sound_timer: int = 0
+    keys: list[int] = [0] * 16
     key_map = {
         sdl2.SDLK_x: 0x0,
         sdl2.SDLK_1: 0x1,
@@ -29,13 +29,13 @@ class CPU:
         sdl2.SDLK_f: 0xE,
         sdl2.SDLK_v: 0xF
     }
-    screen = [0] * 0x800
-    draw_flag = True
-    shift_quirk = False
+    screen: list[int] = [0] * 0x800
+    draw_flag: bool = True
+    shift_quirk: bool = False
 
     ipf: int = 0
-    screen_width = 64
-    screen_height = 32
+    screen_width: int = 64
+    screen_height: int = 32
 
     def __init__(self, ips: int = 540):
         # Load fontset into memory

@@ -18,7 +18,7 @@ public:
 	u8 V[16];
 
 	u16 i;
-	u16 pc;
+	u16 programCounter;
 	bool drawFlag = true;
 	u8 delay_timer;
 	u8 sound_timer;
