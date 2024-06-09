@@ -21,7 +21,7 @@ public class Main {
             return;
         }
         boolean shiftQuirk = romPath.contains("INVADERS");
-        cpu = new CPU(romPath, 540, shiftQuirk);
+        cpu = new CPU(romPath, 9, shiftQuirk);
 
         // Create a window
         JFrame frame = new JFrame("Chip8 Emulator");

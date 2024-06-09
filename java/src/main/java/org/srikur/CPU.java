@@ -94,9 +94,23 @@ public class CPU {
     }
 
     public void emulateCycle() {
-        int instruction = memory[programCounter] << 8 | memory[programCounter + 1];
-        programCounter += 2;
+        for (int i = 0; i < instructionsPerFrame; i++) {
+            int instruction = memory[programCounter] << 8 | memory[programCounter + 1];
+            programCounter += 2;
+            executeInstruction(instruction);
 
+            if (delayTimer > 0) {
+                delayTimer--;
+            }
+
+            if (soundTimer > 0) {
+                soundTimer--;
+            }
+
+        }
+    }
+
+    public void executeInstruction(int instruction) {
         switch (instruction & 0xF000) {
             case 0x0000:
                 if (instruction == 0x00E0) {
@@ -206,9 +220,9 @@ public class CPU {
                         // Set Vx = Vx SHL 1
                         int firstBit = (registers[(instruction & 0x0F00) >> 8] & 0x80) >> 7;
                         if (shiftQuirk) {
-                            registers[(instruction & 0x0F00) >> 8] <<= 1;
+                            registers[(instruction & 0x0F00) >> 8] = (registers[(instruction & 0x0F00) >> 8] << 1) & 0xFF;
                         } else {
-                            registers[(instruction & 0x0F00) >> 8] = registers[(instruction & 0x0F00) >> 8] << 1;
+                            registers[(instruction & 0x0F00) >> 8] = (registers[(instruction & 0x00F0) >> 4] << 1) & 0xFF;
                         }
                         registers[0xF] = firstBit;
                         break;
@@ -313,14 +327,14 @@ public class CPU {
                     case 0x0055:
                         // Store registers V0 through Vx in memory starting at location I.
                         for (int i = 0; i <= ((instruction & 0x0F00) >> 8); i++) {
-                            memory[(indexRegister + i) & 0xFF] = registers[i];
+                            memory[(indexRegister + i) & 0xFFFF] = registers[i];
                         }
-                        indexRegister = indexRegister + (((instruction & 0x0F00) >> 8) + 1) & 0xFFFF;
+                        indexRegister = (indexRegister & 0xFFFF) + (((instruction & 0x0F00) >> 8) + 1) & 0xFFFF;
                         break;
                     case 0x0065:
                         // Read registers V0 through Vx from memory starting at location I
                         for (int i = 0; i <= ((instruction & 0x0F00) >> 8); i++) {
-                            registers[i] = memory[(indexRegister + i) & 0xFFFF];
+                            registers[i] = memory[indexRegister + i] & 0xFF;
                         }
                         indexRegister = indexRegister + (((instruction & 0x0F00) >> 8) + 1) & 0xFFFF;
                         break;
