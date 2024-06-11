@@ -1,5 +1,10 @@
 #pragma once
-#include "includes.h"
+#include <cstdint>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <SDL.h>
 
 constexpr int screen_width = 64;
 constexpr int screen_height = 32;
@@ -14,24 +19,24 @@ public:
 	bool loadGame(const char* romName);
 	void emulateCycle();
 
-	u8 memory[4096];
-	u8 V[16];
+	uint8_t memory[4096];
+	uint8_t V[16];
 
-	u16 i;
-	u16 programCounter;
+	uint16_t i;
+	uint16_t programCounter;
 	bool drawFlag = true;
-	u8 delay_timer;
-	u8 sound_timer;
+	uint8_t delay_timer;
+	uint8_t sound_timer;
 
-	u16 stack[16];
-	u8 keys[16];
-	u16 sp;
+	uint16_t stack[16];
+	uint8_t keys[16];
+	uint16_t sp;
 
 	int shift_quirk;
 
-	u8 graphics[64 * 32];
+	uint8_t graphics[64 * 32];
 
-	u8 fontset[80] = {
+	uint8_t fontset[80] = {
 	  0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
 	  0x20, 0x60, 0x20, 0x20, 0x70, // 1
 	  0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
@@ -52,7 +57,7 @@ public:
 
 private:
 
-	u16 instruction;
+	uint16_t instruction;
 
 	void (CHIP8::* const Chip8_8XYN_Instructions[16])(void) = {
 		&CHIP8::cpu8XY0, &CHIP8::cpu8XY1, &CHIP8::cpu8XY2, &CHIP8::cpu8XY3,

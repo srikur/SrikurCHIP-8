@@ -229,7 +229,7 @@ void CHIP8::cpuDXYN() {
 	V[0xF] = 0;
 	for (int y = 0; y < (instruction & 0xF); y++) {
 		for (int x = 0; x < 8; x++) {
-			u8 pixel = memory[i + y];
+			uint8_t pixel = memory[i + y];
 			if (pixel & (0x80 >> x)) {
 				int index = (V[(instruction & 0xF00) >> 8] + x) % screen_width +
 					((V[(instruction & 0xF0) >> 4] + y) % screen_height) * screen_width;

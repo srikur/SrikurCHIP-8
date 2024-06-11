@@ -1,12 +1,11 @@
-#include "includes.h"
 #include "cpu.h"
 
 using namespace std;
 
-u16 opcode;
-u8 keys[16];
+uint16_t opcode;
+uint8_t keys[16];
 
-u8 keycodes[16] = {
+uint8_t keycodes[16] = {
 	SDLK_x,
 	SDLK_1,
 	SDLK_2,
@@ -34,7 +33,7 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	u32 pixels[screen_width * screen_height];
+	uint32_t pixels[screen_width * screen_height];
 
 	SDL_Window* window = NULL;
 	SDL_Event event;
@@ -80,10 +79,9 @@ int main(int argc, char** argv) {
 
 			for (int i = 0; i < screen_width * screen_height; ++i) {
 				pixels[i] = (cpu->graphics[i] ? 0xFFFFFFFF : 0xFF000000);
-				//pixels[i] = ((0x00FFFFFF * cpu->graphics[i]) | 0xFF000000);
 			}
 
-			SDL_UpdateTexture(texture, NULL, pixels, screen_width * sizeof(u32));
+			SDL_UpdateTexture(texture, NULL, pixels, screen_width * sizeof(uint32_t));
 			SDL_RenderClear(renderer);
 			SDL_RenderCopy(renderer, texture, NULL, NULL);
 			SDL_RenderPresent(renderer);
