@@ -10,10 +10,11 @@
 		76E212232C172653007B5742 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76E212222C172653007B5742 /* AppDelegate.swift */; };
 		76E212252C172654007B5742 /* GameScene.sks in Resources */ = {isa = PBXBuildFile; fileRef = 76E212242C172654007B5742 /* GameScene.sks */; };
 		76E212272C172654007B5742 /* Actions.sks in Resources */ = {isa = PBXBuildFile; fileRef = 76E212262C172654007B5742 /* Actions.sks */; };
-		76E212292C172654007B5742 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76E212282C172654007B5742 /* GameScene.swift */; };
+		76E212292C172654007B5742 /* Emulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76E212282C172654007B5742 /* Emulator.swift */; };
 		76E2122B2C172654007B5742 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76E2122A2C172654007B5742 /* ViewController.swift */; };
 		76E2122D2C172654007B5742 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 76E2122C2C172654007B5742 /* Assets.xcassets */; };
 		76E212302C172654007B5742 /* Base in Resources */ = {isa = PBXBuildFile; fileRef = 76E2122F2C172654007B5742 /* Base */; };
+		76E212382C1733E7007B5742 /* CPU.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76E212372C1733E7007B5742 /* CPU.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -21,11 +22,12 @@
 		76E212222C172653007B5742 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		76E212242C172654007B5742 /* GameScene.sks */ = {isa = PBXFileReference; lastKnownFileType = file.sks; path = GameScene.sks; sourceTree = "<group>"; };
 		76E212262C172654007B5742 /* Actions.sks */ = {isa = PBXFileReference; lastKnownFileType = file.sks; path = Actions.sks; sourceTree = "<group>"; };
-		76E212282C172654007B5742 /* GameScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
+		76E212282C172654007B5742 /* Emulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Emulator.swift; sourceTree = "<group>"; };
 		76E2122A2C172654007B5742 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		76E2122C2C172654007B5742 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		76E2122F2C172654007B5742 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		76E212312C172654007B5742 /* SrikurCHIP_8.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SrikurCHIP_8.entitlements; sourceTree = "<group>"; };
+		76E212372C1733E7007B5742 /* CPU.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CPU.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -61,7 +63,8 @@
 				76E212222C172653007B5742 /* AppDelegate.swift */,
 				76E212242C172654007B5742 /* GameScene.sks */,
 				76E212262C172654007B5742 /* Actions.sks */,
-				76E212282C172654007B5742 /* GameScene.swift */,
+				76E212282C172654007B5742 /* Emulator.swift */,
+				76E212372C1733E7007B5742 /* CPU.swift */,
 				76E2122A2C172654007B5742 /* ViewController.swift */,
 				76E2122C2C172654007B5742 /* Assets.xcassets */,
 				76E2122E2C172654007B5742 /* Main.storyboard */,
@@ -142,8 +145,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				76E212382C1733E7007B5742 /* CPU.swift in Sources */,
 				76E2122B2C172654007B5742 /* ViewController.swift in Sources */,
-				76E212292C172654007B5742 /* GameScene.swift in Sources */,
+				76E212292C172654007B5742 /* Emulator.swift in Sources */,
 				76E212232C172653007B5742 /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
