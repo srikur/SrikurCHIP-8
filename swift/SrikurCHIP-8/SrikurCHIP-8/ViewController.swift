@@ -22,6 +22,8 @@ class ViewController: NSViewController {
                 // Set the scale mode to scale to fit the window
                 scene.scaleMode = .aspectFill
                 
+                scene.view?.preferredFramesPerSecond = 60
+                
                 // Present the scene
                 view.presentScene(scene)
             }

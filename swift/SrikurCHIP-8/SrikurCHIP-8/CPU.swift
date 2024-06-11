@@ -9,21 +9,41 @@ import Foundation
 
 @propertyWrapper
 struct WrappedPixel {
-    private var values: [Int]
-    var wrappedValue: [Int] {
+    private var values: [UInt8]
+    var wrappedValue: [UInt8] {
         get { values }
-        set { values = newValue.map { $0 != 0 ? 0xFF : 0x00 } }
+        set {
+            values = newValue.map { $0 != 0 ? 0xFF : 0x00 }
+        }
     }
     
-    init(wrappedValue: [Int]) {
+    init(wrappedValue: [UInt8]) {
         self.values = wrappedValue.map { $0 != 0 ? 0xFF : 0x00 }
     }
 }
 
-struct Pixel {
-    @WrappedPixel var values: [Int]
-    init(repeating: Int, count: Int) {
-        self.values = Array(repeating: repeating, count: count)
+struct PixelArray {
+    @WrappedPixel var values: [UInt8]
+    init(repeating: UInt8, count: Int) {
+        // RGBA pixel
+        self.values = Array(repeating: repeating, count: count * 4)
+    }
+    
+    mutating func setPixel(_ x: Int, _ y: Int, _ value: UInt8) {
+        let pixelIndex = y * CPU.SCREEN_WIDTH + x
+        self.values[pixelIndex] = value
+        self.values[pixelIndex + 1] = value
+        self.values[pixelIndex + 2] = value
+        self.values[pixelIndex + 3] = value
+    }
+    
+    func getPixel(_ x: Int, _ y: Int) -> UInt8 {
+        let pixelIndex = y * CPU.SCREEN_WIDTH + x
+        return self.values[pixelIndex]
+    }
+    
+    func getArray() -> [UInt8] {
+        return values
     }
     
     mutating func clear() {
@@ -38,23 +58,36 @@ struct Pixel {
 class CPU {
     private var stackPointer: Int = 0
     private var programCounter: Int = 0
-    var delayTimer: Int = 0
-    var soundTimer: Int = 0
+    private var delayTimer: Int = 0
+    private var soundTimer: Int = 0
     private var indexRegister: Int = 0
-    
     private var registers: [Int] = Array(repeating: 0, count: 16)
     private var stack: [Int] = Array(repeating: 0, count: 16)
-    var keys: [Int] = Array(repeating: 0, count: 16)
-    
-    var screen = Pixel(repeating: 0, count: 2048)
-    
+    private var keys: [Int] = Array(repeating: 0, count: 16)
+    private var screen = PixelArray(repeating: 0, count: 2048)
     private var memory: [Int] = Array(repeating: 0, count: 4096)
-    private var drawFlag: Bool = true
-    private var shiftQuirk: Bool = false
+    private var _drawFlag: Bool = true
+    var drawFlag: Bool {
+        get {
+            return _drawFlag
+        }
+        set {
+            _drawFlag = newValue
+        }
+    }
+    private var _shiftQuirk: Bool = false
+    var shiftQuirk: Bool {
+        get {
+            _shiftQuirk
+        }
+        set {
+            _shiftQuirk = newValue
+        }
+    }
     private var ipf: Int = 10
     
-    let SCREEN_WIDTH = 64
-    let SCREEN_HEIGHT = 32
+    static let SCREEN_WIDTH = 64
+    static let SCREEN_HEIGHT = 32
     
     private let fontset: [Int] = [
         0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -77,18 +110,34 @@ class CPU {
     
     let instructionTable: [(CPU) -> (Int) -> ()]
     
-    init(ipf: Int) {
+    init(ipf: Int, romPath: String) {
         self.ipf = ipf
         self.instructionTable = [
             CPU.i00EX, CPU.i1NNN, CPU.i2NNN, CPU.i3XNN, CPU.i4XNN, CPU.i5XY0, CPU.i6XNN, CPU.i7XNN,
             CPU.i8XYN, CPU.i9XY0, CPU.iANNN, CPU.iBNNN, CPU.iCXNN, CPU.iDXY0, CPU.iFXNN
         ]
+        self.loadRom(romPath)
+    }
+    
+    func loadRom(_ romPath: String) {
+        let romData = try! Data(contentsOf: URL(fileURLWithPath: romPath))
+        for i in 0..<romData.count {
+            memory[i + 0x200] = Int(romData[i])
+        }
+    }
+    
+    func setKey(_ key: Int, _ value: Bool) {
+        keys[key] = value ? 1 : 0
+    }
+    
+    func getScreen() -> [UInt8] {
+        return screen.getArray()
     }
     
     func emulateCycle() {
-        for i in 1...ipf {
+        for _ in 1...ipf {
             // Fetch
-            var instruction = memory[programCounter] << 8 | memory[programCounter + 1]
+            let instruction = memory[programCounter] << 8 | memory[programCounter + 1]
             programCounter += 2
             
             // Decode
@@ -97,6 +146,7 @@ class CPU {
             
             // Execute
             functionPointer(self)(instruction)
+            print("Executed: \(instruction)")
             
             // Update Timers
             if delayTimer > 0 {
