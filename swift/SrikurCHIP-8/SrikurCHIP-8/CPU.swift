@@ -7,64 +7,16 @@
 
 import Foundation
 
-@propertyWrapper
-struct WrappedPixel {
-    private var values: [UInt8]
-    var wrappedValue: [UInt8] {
-        get { values }
-        set {
-            values = newValue.map { $0 != 0 ? 0xFF : 0x00 }
-        }
-    }
-    
-    init(wrappedValue: [UInt8]) {
-        self.values = wrappedValue.map { $0 != 0 ? 0xFF : 0x00 }
-    }
-}
-
-struct PixelArray {
-    @WrappedPixel var values: [UInt8]
-    init(repeating: UInt8, count: Int) {
-        // RGBA pixel
-        self.values = Array(repeating: repeating, count: count * 4)
-    }
-    
-    mutating func setPixel(_ x: Int, _ y: Int, _ value: UInt8) {
-        let pixelIndex = y * CPU.SCREEN_WIDTH + x
-        self.values[pixelIndex] = value
-        self.values[pixelIndex + 1] = value
-        self.values[pixelIndex + 2] = value
-        self.values[pixelIndex + 3] = value
-    }
-    
-    func getPixel(_ x: Int, _ y: Int) -> UInt8 {
-        let pixelIndex = y * CPU.SCREEN_WIDTH + x
-        return self.values[pixelIndex]
-    }
-    
-    func getArray() -> [UInt8] {
-        return values
-    }
-    
-    mutating func clear() {
-        values.withUnsafeMutableBufferPointer({ buffer in
-            for i in 0..<buffer.count {
-                buffer[i] = 0
-            }
-        })
-    }
-}
-
 class CPU {
     private var stackPointer: Int = 0
-    private var programCounter: Int = 0
+    private var programCounter: Int = 0x200
     private var delayTimer: Int = 0
     private var soundTimer: Int = 0
     private var indexRegister: Int = 0
     private var registers: [Int] = Array(repeating: 0, count: 16)
     private var stack: [Int] = Array(repeating: 0, count: 16)
     private var keys: [Int] = Array(repeating: 0, count: 16)
-    private var screen = PixelArray(repeating: 0, count: 2048)
+    private var screen: [UInt8] = Array(repeating: 0, count: 2048)
     private var memory: [Int] = Array(repeating: 0, count: 4096)
     private var _drawFlag: Bool = true
     var drawFlag: Bool {
@@ -110,20 +62,30 @@ class CPU {
     
     let instructionTable: [(CPU) -> (Int) -> ()]
     
-    init(ipf: Int, romPath: String) {
+    init(ipf: Int, romPath: URL) {
         self.ipf = ipf
         self.instructionTable = [
             CPU.i00EX, CPU.i1NNN, CPU.i2NNN, CPU.i3XNN, CPU.i4XNN, CPU.i5XY0, CPU.i6XNN, CPU.i7XNN,
-            CPU.i8XYN, CPU.i9XY0, CPU.iANNN, CPU.iBNNN, CPU.iCXNN, CPU.iDXY0, CPU.iFXNN
+            CPU.i8XYN, CPU.i9XY0, CPU.iANNN, CPU.iBNNN, CPU.iCXNN, CPU.iDXY0, CPU.iEXNN, CPU.iFXNN
         ]
+        
+        // Load fontset
+        let fontsetAddress = 0x00
+        for i in 0..<fontset.count {
+            let value = fontset[i]
+            memory[fontsetAddress + i] = value
+        }
+        
         self.loadRom(romPath)
     }
     
-    func loadRom(_ romPath: String) {
-        let romData = try! Data(contentsOf: URL(fileURLWithPath: romPath))
+    func loadRom(_ romPath: URL) {
+        print("Loading ROM: \(romPath)")
+        let romData = try! Data(contentsOf: romPath)
         for i in 0..<romData.count {
             memory[i + 0x200] = Int(romData[i])
         }
+        print("Loaded \(romData.count) bytes")
     }
     
     func setKey(_ key: Int, _ value: Bool) {
@@ -131,13 +93,13 @@ class CPU {
     }
     
     func getScreen() -> [UInt8] {
-        return screen.getArray()
+        return screen
     }
     
     func emulateCycle() {
         for _ in 1...ipf {
             // Fetch
-            let instruction = memory[programCounter] << 8 | memory[programCounter + 1]
+            let instruction = (memory[programCounter] << 8) | memory[programCounter + 1]
             programCounter += 2
             
             // Decode
@@ -146,7 +108,6 @@ class CPU {
             
             // Execute
             functionPointer(self)(instruction)
-            print("Executed: \(instruction)")
             
             // Update Timers
             if delayTimer > 0 {
@@ -154,6 +115,7 @@ class CPU {
             }
             if soundTimer > 0 {
                 soundTimer -= 1
+                print("BEEP")
             }
         }
     }
@@ -162,7 +124,12 @@ class CPU {
     func i00EX(instruction: Int) {
         if instruction == 0x00E0 {
             // 0E00: Clear the screen. Set all pixels to 0
-            screen.clear()
+            screen.withUnsafeMutableBufferPointer({ buffer in
+                for i in 0..<buffer.count {
+                    buffer[i] = 0
+                }
+            })
+            drawFlag = true
         } else if instruction == 0x00EE {
             // 00EE: Return from a subroutine. Set the program counter to the address at the top of the stack
             stackPointer -= 1
@@ -184,99 +151,99 @@ class CPU {
     
     func i3XNN(instruction: Int) {
         // 3XNN: Skip the next instruction if register X equals NN
-        if registers[instruction & 0x0F00 >> 8] == (instruction & 0x00FF) {
+        if registers[(instruction & 0x0F00) >> 8] == (instruction & 0x00FF) {
             programCounter += 2
         }
     }
     
     func i4XNN(instruction: Int) {
         // 4XNN: Skip the next instruction if register X does not equal NN
-        if registers[instruction & 0x0F00 >> 8] != (instruction & 0x00FF) {
+        if registers[(instruction & 0x0F00) >> 8] != (instruction & 0x00FF) {
             programCounter += 2
         }
     }
     
     func i5XY0(instruction: Int) {
         // 5XY0: Skip the next instruction if register X equals register Y
-        if registers[instruction & 0x0F00 >> 8] == registers[instruction & 0x00F0 >> 4] {
+        if registers[(instruction & 0x0F00) >> 8] == registers[(instruction & 0x00F0) >> 4] {
             programCounter += 2
         }
     }
     
     func i6XNN(instruction: Int) {
         // 6XNN: Set register X to NN
-        registers[instruction & 0x0F00 >> 8] = instruction & 0x00FF
+        registers[(instruction & 0x0F00) >> 8] = instruction & 0x00FF
     }
     
     func i7XNN(instruction: Int) {
         // 7XNN: Add NN to register X
-        registers[instruction & 0x0F00 >> 8] = registers[instruction & 0x0F00 >> 8] + (instruction & 0x00FF) & 0xFF
+        registers[(instruction & 0x0F00) >> 8] = ((registers[(instruction & 0x0F00) >> 8] & 0xFF) + (instruction & 0x00FF)) & 0xFF
     }
     
     func i8XYN(instruction: Int) {
         switch instruction & 0x000F {
         case 0x0000:
             // 8XY0: Set register X to the value of register Y
-            registers[instruction & 0x0F00 >> 8] = registers[instruction & 0x00F0 >> 4]
+            registers[(instruction & 0x0F00) >> 8] = registers[(instruction & 0x00F0) >> 4]
         case 0x0001:
             // 8XY1: Set register X to the value of register X OR register Y
-            registers[instruction & 0x0F00 >> 8] |= registers[instruction & 0x00F0 >> 4]
+            registers[(instruction & 0x0F00) >> 8] |= registers[(instruction & 0x00F0) >> 4]
             
         case 0x0002:
             // 8XY2: Set register X to the value of register X AND register Y
-            registers[instruction & 0x0F00 >> 8] &= registers[instruction & 0x00F0 >> 4]
+            registers[(instruction & 0x0F00) >> 8] &= registers[(instruction & 0x00F0) >> 4]
             
         case 0x0003:
             // 8XY3: Set register X to the value of register X XOR register Y
-            registers[instruction & 0x0F00 >> 8] ^= registers[instruction & 0x00F0 >> 4]
+            registers[(instruction & 0x0F00) >> 8] ^= registers[(instruction & 0x00F0) >> 4]
             
         case 0x0004:
             // 8XY4: Add the value of register Y to register X. Set VF to 1 if there is a carry, 0 otherwise
-            registers[instruction & 0x0F00 >> 8] = (registers[instruction & 0x0F00 >> 8] + registers[instruction & 0x00F0 >> 4])
-            if registers[instruction & 0x0F00 >> 8] > 0xFF {
+            registers[(instruction & 0x0F00) >> 8] = (registers[(instruction & 0x0F00) >> 8] + registers[(instruction & 0x00F0) >> 4])
+            if registers[(instruction & 0x0F00) >> 8] > 0xFF {
                 registers[0xF] = 1
             } else {
                 registers[0xF] = 0
             }
-            registers[instruction & 0x0F00 >> 8] &= 0xFF
+            registers[(instruction & 0x0F00) >> 8] &= 0xFF
         
         case 0x0005:
             // 8XY5: Subtract the value of register Y from register X. Set VF to 0 if there is a borrow, 1 otherwise
-            registers[instruction & 0x0F00 >> 8] = registers[instruction & 0x0F00 >> 8] - registers[instruction & 0x00F0 >> 4]
-            if registers[instruction & 0x0F00 >> 8] < 0 {
+            registers[(instruction & 0x0F00) >> 8] = registers[(instruction & 0x0F00) >> 8] - registers[(instruction & 0x00F0) >> 4]
+            if registers[(instruction & 0x0F00) >> 8] < 0 {
                 registers[0xF] = 0
             } else {
                 registers[0xF] = 1
             }
-            registers[instruction & 0x0F00 >> 8] &= 0xFF
+            registers[(instruction & 0x0F00) >> 8] &= 0xFF
             
         case 0x0006:
             // 8XY6: Shift the value of register X right by 1. Set VF to the least significant bit of X before the shift
-            let lastBit = registers[instruction & 0x0F00 >> 8] & 0x1
+            let lastBit = registers[(instruction & 0x0F00) >> 8] & 0x1
             if shiftQuirk {
-                registers[instruction & 0x0F00 >> 8] >>= 1
+                registers[(instruction & 0x0F00) >> 8] >>= 1
             } else {
-                registers[instruction & 0x0F00 >> 8] = registers[instruction & 0x0F00 >> 4] >> 1
+                registers[(instruction & 0x0F00) >> 8] = registers[(instruction & 0x00F0) >> 4] >> 1
             }
             registers[0xF] = lastBit
             
         case 0x0007:
             // 8XY7: Set register X to the value of register Y minus register X. Set VF to 0 if there is a borrow, 1 otherwise
-            registers[instruction & 0x0F00 >> 8] = registers[instruction & 0x00F0 >> 4] - registers[instruction & 0x0F00 >> 8]
-            if registers[instruction & 0x0F00 >> 8] < 0 {
+            registers[(instruction & 0x0F00) >> 8] = registers[(instruction & 0x00F0) >> 4] - registers[(instruction & 0x0F00) >> 8]
+            if registers[(instruction & 0x0F00) >> 8] < 0 {
                 registers[0xF] = 0
             } else {
                 registers[0xF] = 1
             }
-            registers[instruction & 0x0F00 >> 8] &= 0xFF
+            registers[(instruction & 0x0F00) >> 8] &= 0xFF
             
         case 0x000E:
             // 8XYE: Shift the value of register X left by 1. Set VF to the most significant bit of X before the shift
-            let firstBit = (registers[instruction & 0x0F00 >> 8] & 0x80) >> 7
+            let firstBit = (registers[(instruction & 0x0F00) >> 8] & 0x80) >> 7
             if shiftQuirk {
-                registers[instruction & 0x0F00 >> 8] = (registers[instruction & 0x0F00 >> 8] & 0xFF << 1) & 0xFF
+                registers[(instruction & 0x0F00) >> 8] = ((registers[(instruction & 0x0F00) >> 8] & 0xFF) << 1) & 0xFF
             } else {
-                registers[instruction & 0x0F00 >> 8] = (registers[instruction & 0x0F00 >> 4] & 0xFF << 1) & 0xFF
+                registers[(instruction & 0x0F00) >> 8] = ((registers[(instruction & 0x00F0) >> 4] & 0xFF) << 1) & 0xFF
             }
             registers[0xF] = firstBit
             
@@ -287,7 +254,7 @@ class CPU {
     
     func i9XY0(instruction: Int) {
         // 9XY0: Skip the next instruction if register X does not equal register Y
-        if registers[instruction & 0x0F00 >> 8] != registers[instruction & 0x00F0 >> 4] {
+        if registers[(instruction & 0x0F00) >> 8] != registers[(instruction & 0x00F0) >> 4] {
             programCounter += 2
         }
     }
@@ -305,11 +272,35 @@ class CPU {
     func iCXNN(instruction: Int) {
         // CXNN: Set register X to a random number AND NN
         let randomNumber = Int.random(in: 0..<256)
-        registers[instruction & 0x0F00 >> 8] = randomNumber & (instruction & 0x00FF)
+        registers[(instruction & 0x0F00) >> 8] = randomNumber & (instruction & 0x00FF)
     }
     
     func iDXY0(instruction: Int) {
-        
+        // DXYN: Draw a sprite at coordinate VX, VY using N bytes of sprite data starting at the address stored in the index register
+        // If any set pixels are unset, set VF to 1. Otherwise, set VF to 0
+        registers[0xF] = 0
+        let x = registers[(instruction & 0x0F00) >> 8]
+        let y = registers[(instruction & 0x00F0) >> 4]
+        let height = instruction & 0x000F
+
+        for i in 0..<height {
+            let spriteByte = memory[indexRegister + i]
+            for j in 0..<8 {
+                let pixel = (spriteByte & (0x80 >> j)) >> (7 - j)
+                if pixel == 1 {
+                    let xCoord = (x + j) % CPU.SCREEN_WIDTH
+                    let yCoord = (y + i) % CPU.SCREEN_HEIGHT
+                    let index = xCoord + (yCoord * CPU.SCREEN_WIDTH)
+                    
+                    if screen[index] == 1 {
+                        registers[0xF] = 1
+                    }
+                    
+                    screen[index] ^= 1
+                }
+            }
+        }
+        drawFlag = true
     }
     
     func iEXNN(instruction: Int) {
@@ -369,17 +360,17 @@ class CPU {
             
         case 0x0055:
             // FX55: Store the values of registers V0 to VX in memory starting at address I
-            for i in 0...registers[(instruction & 0x0F00) >> 8] {
+            for i in 0...(instruction & 0x0F00) >> 8 {
                 memory[(indexRegister + i) & 0xFFFF] = registers[i]
             }
-            indexRegister = (indexRegister + (((instruction & 0x0F00) >> 8) + 1)) & 0xFFFF
+            indexRegister = ((indexRegister & 0xFFFF) + ((((instruction & 0x0F00) >> 8) + 1) & 0xFFFF)) & 0xFFFF
             
         case 0x0065:
             // FX65: Fill registers V0 to VX with values from memory starting at address I
-            for i in 0...registers[(instruction & 0x0F00) >> 8] {
+            for i in 0...(instruction & 0x0F00) >> 8 {
                 registers[i] = memory[indexRegister + i] & 0xFF
             }
-            indexRegister = (indexRegister + (((instruction & 0x0F00) >> 8) + 1)) & 0xFFFF
+            indexRegister = ((indexRegister & 0xFFFF) + ((((instruction & 0x0F00) >> 8) + 1) & 0xFFFF)) & 0xFFFF
         default:
             break
         }
